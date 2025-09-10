@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Laporan Transaksi Sales</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], select {
+            width: calc(100% - 22px);
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        .invoice-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        .invoice-item input {
+            flex: 1;
+        }
+        .invoice-item .invoice-number {
+            flex: 2;
+        }
+        .invoice-item .invoice-nominal {
+            flex: 1.5;
+        }
+        .add-invoice, .remove-invoice {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .remove-invoice {
+            background-color: #dc3545;
+        }
+        .add-invoice:hover {
+            background-color: #0056b3;
+        }
+        .remove-invoice:hover {
+            background-color: #c82333;
+        }
+        .total-nominal {
+            margin-top: 25px;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: right;
+            padding-top: 15px;
+            border-top: 1px dashed #eee;
+            color: #0056b3;
+        }
+        button[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            margin-top: 30px;
+            transition: background-color 0.3s ease;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+
+        /* Autocomplete styling */
+        .autocomplete-suggestions {
+            border: 1px solid #ddd;
+            max-height: 180px;
+            overflow-y: auto;
+            position: absolute; /* Set position to absolute */
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000; /* Ensure it's above other elements */
+            width: calc(100% - 22px); /* Match input width */
+            box-sizing: border-box;
+            border-radius: 0 0 5px 5px;
+        }
+        .autocomplete-suggestion {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .autocomplete-suggestion:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* CSV Import/Export Styles */
+        .csv-controls {
+            margin-top: 30px;
+            border-top: 1px dashed #eee;
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .csv-controls button, .csv-controls input[type="file"] + label {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .csv-controls button:hover, .csv-controls input[type="file"] + label:hover {
+            background-color: #5a6268;
+        }
+        .csv-controls input[type="file"] {
+            display: none; /* Hide default file input */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Laporan Transaksi Sales</h2>
+
+        <div class="form-group">
+            <label for="namaToko">Nama Toko:</label>
+            <input type="text" id="namaToko" placeholder="Ketik nama toko..." autocomplete="off">
+            <div id="tokoSuggestions" class="autocomplete-suggestions" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="noHpToko">No HP Toko:</label>
+            <input type="text" id="noHpToko" placeholder="Nomor HP akan muncul otomatis" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="namaSales">Nama Sales:</label>
+            <select id="namaSales">
+                <option value="ARIFIN AHMAD">ARIFIN AHMAD</option>
+                <option value="AZHAR ASRAM">AZHAR ASRAM</option>
+                <option value="RIKI YOLANDA PUTRA">RIKI YOLANDA PUTRA</option>
+                <option value="M FIRDAUS CH">M FIRDAUS CH</option>
+            </select>
+        </div>
+
+        <div id="invoiceContainer">
+            <div class="form-group invoice-item">
+                <input type="text" class="invoice-number" placeholder="XXXX-XXXXXX-XXXXXXX" maxlength="19" oninput="formatInvoice(this)" onblur="this.value = this.value.toUpperCase()">
+                <input type="text" class="invoice-nominal" placeholder="Rp. 0" oninput="formatRupiah(this); calculateTotal()">
+                <button type="button" class="add-invoice" onclick="addInvoiceField()">+</button>
+            </div>
+        </div>
+
+        <div class="total-nominal">
+            Total Nominal: <span id="totalNominal">Rp. 0,-</span>
+        </div>
+
+        <button type="submit" onclick="kirimKeWhatsApp()">Kirim ke WhatsApp</button>
+
+        <div class="csv-controls">
+            <button type="button" onclick="exportDbToCsv()">Export Database Toko (CSV)</button>
+            <div>
+                <input type="file" id="importCsvFile" accept=".csv" onchange="importDbFromCsv(event)">
+                <label for="importCsvFile">Import Database Toko (CSV)</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Database Toko
+        let dbToko = [
+            { name: "Karya Usaha", phone: "6285265230909" },
+            { name: "Pancuran Mas", phone: "6281371562347" },
+            { name: "Wilson", phone: "6285158996011" },
+            { name: "Timur Jaya", phone: "6281378103000" }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateTotal();
+            // Load dbToko from LocalStorage if available
+            const savedDb = localStorage.getItem('dbToko');
+            if (savedDb) {
+                dbToko = JSON.parse(savedDb);
+            }
+        });
+
+        // --- Fungsi Autocomplete Nama Toko ---
+        const namaTokoInput = document.getElementById('namaToko');
+        const noHpTokoInput = document.getElementById('noHpToko');
+        const tokoSuggestionsDiv = document.getElementById('tokoSuggestions');
+
+        namaTokoInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            tokoSuggestionsDiv.innerHTML = '';
+            noHpTokoInput.value = ''; // Clear phone number when typing
+            
+            if (query.length === 0) {
+                tokoSuggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            const filteredToko = dbToko.filter(toko =>
+                toko.name.toLowerCase().includes(query)
+            );
+
+            if (filteredToko.length > 0) {
+                filteredToko.forEach(toko => {
+                    const div = document.createElement('div');
+                    div.classList.add('autocomplete-suggestion');
+                    div.textContent = toko.name;
+                    div.addEventListener('click', function() {
+                        namaTokoInput.value = toko.name;
+                        noHpTokoInput.value = toko.phone; // Set phone number
+                        tokoSuggestionsDiv.style.display = 'none';
+                    });
+                    tokoSuggestionsDiv.appendChild(div);
+                });
+                tokoSuggestionsDiv.style.display = 'block';
+            } else {
+                tokoSuggestionsDiv.style.display = 'none';
+            }
+        });
+
+        namaTokoInput.addEventListener('blur', function() {
+            // Give a short delay to allow click on suggestion to register
+            setTimeout(() => {
+                tokoSuggestionsDiv.style.display = 'none';
+                // If the user typed a name but didn't select, check if it matches existing
+                const matchedToko = dbToko.find(toko => toko.name.toLowerCase() === namaTokoInput.value.toLowerCase());
+                if (matchedToko) {
+                    namaTokoInput.value = matchedToko.name; // Ensure exact match
+                    noHpTokoInput.value = matchedToko.phone;
+                } else {
+                    noHpTokoInput.value = ''; // Clear if no match
+                }
+            }, 200);
+        });
+
+        namaTokoInput.addEventListener('focus', function() {
+            if (this.value.length > 0) {
+                const query = this.value.toLowerCase();
+                const filteredToko = dbToko.filter(toko =>
+                    toko.name.toLowerCase().includes(query)
+                );
+                if (filteredToko.length > 0) {
+                    tokoSuggestionsDiv.style.display = 'block';
+                }
+            }
+        });
+
+        // --- Fungsi untuk format Nomor Invoice ---
+        function formatInvoice(input) {
+            let value = input.value.replace(/[^0-9A-Za-z]/g, ''); // Remove non-alphanumeric characters
+            let formattedValue = '';
+
+            if (value.length > 0) {
+                formattedValue += value.substring(0, 4);
+            }
+            if (value.length > 4) {
+                formattedValue += '-' + value.substring(4, 10);
+            }
+            if (value.length > 10) {
+                formattedValue += '-' + value.substring(10, 17);
+            }
+            input.value = formattedValue.toUpperCase();
+        }
+
+        // --- Fungsi untuk format Rupiah ---
+        function formatRupiah(input) {
+            let value = input.value.replace(/[^0-9]/g, ''); // Hapus semua karakter selain angka
+            if (value === '') {
+                input.value = '';
+                return;
+            }
+
+            let number = parseInt(value, 10);
+            if (isNaN(number)) {
+                input.value = '';
+                return;
+            }
+
+            // Format ke Rupiah
+            let rupiah = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(number);
+
+            // Ganti "Rp" dengan "Rp." dan ",00" dengan ",-"
+            rupiah = rupiah.replace("Rp", "Rp.").replace(",00", ",-");
+            input.value = rupiah;
+        }
+
+        // --- Fungsi untuk menambahkan baris Invoice ---
+        function addInvoiceField() {
+            const invoiceContainer = document.getElementById('invoiceContainer');
+            const newItem = document.createElement('div');
+            newItem.classList.add('form-group', 'invoice-item');
+            newItem.innerHTML = `
+                <input type="text" class="invoice-number" placeholder="XXXX-XXXXXX-XXXXXXX" maxlength="19" oninput="formatInvoice(this)" onblur="this.value = this.value.toUpperCase()">
+                <input type="text" class="invoice-nominal" placeholder="Rp. 0" oninput="formatRupiah(this); calculateTotal()">
+                <button type="button" class="remove-invoice" onclick="removeInvoiceField(this)">-</button>
+            `;
+            invoiceContainer.appendChild(newItem);
+            calculateTotal(); // Recalculate after adding
+        }
+
+        // --- Fungsi untuk menghapus baris Invoice ---
+        function removeInvoiceField(button) {
+            const invoiceItem = button.parentNode;
+            invoiceItem.remove();
+            calculateTotal(); // Recalculate total after removing
+        }
+
+        // --- Fungsi untuk menghitung Total Nominal ---
+        function calculateTotal() {
+            const nominalInputs = document.querySelectorAll('.invoice-nominal');
+            let total = 0;
+            nominalInputs.forEach(input => {
+                // Hapus Rp., spasi, titik ribuan, dan ganti koma desimal menjadi titik
+                let value = input.value.replace(/Rp\.?\s?/g, '').replace(/\./g, '').replace(/,-/g, '').replace(/,/g, '.');
+                let numericValue = parseFloat(value);
+                if (!isNaN(numericValue)) {
+                    total += numericValue;
+                }
+            });
+
+            const totalNominalSpan = document.getElementById('totalNominal');
+            totalNominalSpan.textContent = new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(total).replace("Rp", "Rp.").replace(",00", ",-");
+        }
+
+        // --- Fungsi Kirim ke WhatsApp ---
+        function kirimKeWhatsApp() {
+            const namaToko = document.getElementById('namaToko').value.trim();
+            const namaSales = document.getElementById('namaSales').value;
+            const invoiceItems = document.querySelectorAll('.invoice-item');
+            const totalNominalFormatted = document.getElementById('totalNominal').textContent; // Sudah diformat Rp. X.XXX.XXX,-
+
+            if (!namaToko) {
+                alert("Nama Toko harus diisi!");
+                return;
+            }
+
+            const tokoData = dbToko.find(toko => toko.name === namaToko);
+            if (!tokoData) {
+                alert("Nama Toko tidak ditemukan dalam database atau belum dipilih dari saran.");
+                return;
+            }
+
+            let phoneNumber = tokoData.phone.replace(/\D/g, ''); // Hapus semua non-digit
+            if (!phoneNumber.startsWith('62')) { // Pastikan diawali 62
+                phoneNumber = '62' + phoneNumber;
+            }
+
+            let invoiceDetails = '';
+            invoiceItems.forEach(item => {
+                const invoiceNumber = item.querySelector('.invoice-number').value.trim();
+                const invoiceNominal = item.querySelector('.invoice-nominal').value.trim();
+
+                if (invoiceNumber && invoiceNominal) {
+                    invoiceDetails += `${invoiceNumber} senilai ${invoiceNominal},\n`;
+                }
+            });
+
+            if (!invoiceDetails) {
+                alert("Harap masukkan setidaknya satu Nomor Invoice dan Nominal.");
+                return;
+            }
+
+            // Hapus koma dan newline terakhir jika ada
+            invoiceDetails = invoiceDetails.replace(/,\n$/, '\n');
+
+            const message = `Terimakasih *Toko : ${namaToko}* telah melakukan pembayaran TUNAI kepada Salesman kami yang bernama *${namaSales}*. Dengan rincian sbb :\n${invoiceDetails}*Dengan total ${totalNominalFormatted}*\nMohon konfirmasinya , terimakasih.\n\nSalam Finance PT Mitra Nuansa Utama Pekanbaru.\n\nMohon untuk dapat dilakukan pembayaran via Transfer melalui :\nBCA - PT Mitra Nuansa Utama - 0102353151\nBRI - PT Mitra Nuansa Utama - 0030160160160302\nAgar langsung diterima PT Mitra Nuansa Utama dan dapat mengurangi resiko dijalan oleh salesman kita.\n\n_"Pesan ini adalah pesan otomatis pada saat salesman melaporkan transaksi ke Finance"_`;
+
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // --- Fungsi Ekspor Database ke CSV ---
+        function exportDbToCsv() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nama Toko,No HP\n"; // Header CSV
+            dbToko.forEach(toko => {
+                // Ensure no commas within name or phone that could break CSV structure
+                const escapedName = toko.name.includes(',') ? `"${toko.name.replace(/"/g, '""')}"` : toko.name;
+                const escapedPhone = toko.phone.includes(',') ? `"${toko.phone.replace(/"/g, '""')}"` : toko.phone;
+                csvContent += `${escapedName},${escapedPhone}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "data_toko.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- Fungsi Impor Database dari CSV ---
+        function importDbFromCsv(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                alert("Tidak ada file yang dipilih.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const newDb = [];
+
+                if (lines.length === 0) {
+                    alert("File CSV kosong.");
+                    return;
+                }
+
+                // Skip header row
+                for (let i = 1; i < lines.length; i++) {
+                    const columns = lines[i].split(',');
+                    if (columns.length >= 2) {
+                        const name = columns[0].trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+                        const phone = columns[1].trim().replace(/^"|"$/g, '').replace(/""/g, '"');
+                        if (name && phone) {
+                            newDb.push({ name: name, phone: phone });
+                        }
+                    }
+                }
+                
+                if (newDb.length === 0) {
+                    alert("Tidak ada data valid yang ditemukan di file CSV.");
+                    return;
+                }
+
+                dbToko = newDb; // Update the global dbToko array
+                localStorage.setItem('dbToko', JSON.stringify(dbToko)); // Save to LocalStorage
+                alert("Database Toko berhasil diimpor!");
+                
+                // Clear and re-evaluate autocomplete if needed
+                namaTokoInput.value = '';
+                noHpTokoInput.value = '';
+                tokoSuggestionsDiv.style.display = 'none';
+
+                // Reset file input value to allow re-importing same file
+                event.target.value = ''; 
+            };
+            reader.onerror = function() {
+                alert("Gagal membaca file.");
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
